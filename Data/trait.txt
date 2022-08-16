@@ -1,4 +1,4 @@
-Taxon	Calculated MRs [mL O2 * 1/h * 1/g]
+Taxon	Calculated_MRs
 Anseriform	11.79700076
 Diplodocid	10.17625585
 Rhamphorhynchoid	6.164370979
