@@ -1,12 +1,13 @@
 #Analyses Metabolic rates
-#R version 3.5.1
+#R version 4.2.1
 
 library(ape)
 library(geiger)
 library(phytools)
 library(castor)
 library(paleotree)
-library(ggtree)
+# library(ggtree)
+  # package ‘ggtree’ is not available for this version of R
 library(phytools)
 library(strap)
 
@@ -120,9 +121,23 @@ writeNexus(Consensus_phy_lad, "consensus_Paleotree_final.tre")
 
 # +Ancestral reconstruction  ----
 
-dat_MR <- read.table("TaxonTimes.txt",header=TRUE,row.names=1)
+# dat_MR <- read.table("TaxonTimes.txt",header=TRUE,row.names=1)
+# 
+# MetRate <- dat_MR$Calculated.MRs..mL.O2...1.h...1.g.
+# names(MetRate) <- dat_MR$Taxon
+# 
+# 
+# phydata <- treedata(Consensus_phy_lad, MetRate, sort=TRUE)
 
-MetRate <- dat_MR$Calculated.MRs..mL.O2...1.h...1.g.
+#Error: "Error in treedata(Consensus_phy_lad, MetRate, sort = TRUE) : names for 'data' must be supplied"
+
+#Fix: Wrong file referenced in original code. Should be "trait.txt"
+  # New error: "Error in scan(file = file, what = what, sep = sep, quote = quote, dec = dec,  : line 1 did not have 9 elements"
+#Fix: To avoid new error, renamed column "Calculated MRs [mL O2 * 1/h * 1/g]" in "trait.txt" to "Calculated_MRs"
+
+dat_MR <- read.table("trait.txt",header=TRUE)
+
+MetRate <- dat_MR$Calculated_MRs
 names(MetRate) <- dat_MR$Taxon
 
 
@@ -143,22 +158,76 @@ contmap_MR <- contMap(phydata$phy, MetRate_phy[,1], method = "user",
 contmap_MR$cols[] <- ramp_rate(1001)
 
 
-
-pdf("contmap_phy.pdf")
-plot(contmap_MR, lwd = 2, fsize=0.5, outline=F)
+# Modification to original code: add node labels to plot
+pdf("Results-Original-contmap_phy.pdf")
+plot(contmap_MR, lwd = 2, fsize=0.5, outline=F)+
+nodelabels(col= "red", cex=0.5, frame="none")
 dev.off()
 
 
 
-td <- data.frame(node = nodeid(phydata$phy, names(MetRate_phy[,1])),
-                 trait = MetRate_phy[,1])
-nd <- data.frame(node = as.numeric(names(fit$ace)),
-                 trait = fit$ace)
-d <- rbind(td, nd)
+# td <- data.frame(node = nodeid(phydata$phy, names(MetRate_phy[,1])),
+#                  trait = MetRate_phy[,1])
+# nd <- data.frame(node = as.numeric(names(fit$ace)),
+#                  trait = fit$ace)
+# d <- rbind(td, nd)
+# 
+# 
+# write.table(d, "ASR_MetRate.csv", sep=";", dec=".")
 
+# Report the 95% Confidence Intervals
+write.table(fit$CI, "Results-Original-Confidence_Intervals.txt", sep=";", dec=".")
+write.table(fit$ace, "Results-Original-ACE.txt", sep=";", dec=".")
 
-write.table(d, "ASR_MetRate.csv", sep=";", dec=".")
+#########################################################################################
 
+# Plot confidence intervals
+
+library("ggplot2")
+
+ML_rates <- read.table("Results-Original-ACE.txt",header=TRUE, sep = ";", row.names = 1)
+CI_rates <- read.table("Results-Original-Confidence_Intervals.txt",header=TRUE, sep = ";", row.names = 1)
+rates <- merge(ML_rates,CI_rates,by = 'row.names')
+
+# Convert Row.name back to character
+rates$Row.names<- as.character(trimws(rates$Row.names))
+
+# Rename important nodes (based on file 'Results-Original-contmap_phy.pdf')
+rates['Row.names'][rates['Row.names'] == 57] <- 'Diapsida'
+rates['Row.names'][rates['Row.names'] == 62] <- 'Dinosauria'
+rates['Row.names'][rates['Row.names'] == 61] <- 'Ornithodira'
+rates['Row.names'][rates['Row.names'] == 60] <- 'Archosauria'
+rates['Row.names'][rates['Row.names'] == 77] <- 'Ornithischia'
+rates['Row.names'][rates['Row.names'] == 63] <- 'Saurischia'
+rates['Row.names'][rates['Row.names'] == 94] <- 'Mammalia'
+rates['Row.names'][rates['Row.names'] == 96] <- 'Placentalia'
+rates['Row.names'][rates['Row.names'] == 84] <- 'Squamata'
+rates['Row.names'][rates['Row.names'] == 82] <- 'Pterosauria'
+rates['Row.names'][rates['Row.names'] == 93] <- 'Choristodera'
+rates['Row.names'][rates['Row.names'] == 98] <- 'Laurasiatheria'
+
+# Remove other nodes (those with numbers)
+data_subset <- subset(rates, Row.names > 99)
+# Change column names
+colnames(data_subset) <- c("Clade","Adjusted_Metabolic_Rate","CI_Low","CI_High")
+
+# Generate the plot
+p <- ggplot(data_subset, aes(x=factor(Clade, level=c('Diapsida', 'Choristodera', 'Squamata', 'Archosauria', 'Ornithodira', 'Pterosauria', 'Dinosauria', 'Ornithischia', 'Saurischia', 'Mammalia', 'Placentalia', 'Laurasiatheria')), Adjusted_Metabolic_Rate)) +
+  geom_point() + 
+  geom_hline(yintercept=3, linetype="dashed", color = "red") +
+  theme(axis.text.x = element_text(angle = 90)) +
+  geom_errorbar(aes(ymin = CI_Low, ymax = CI_High))
+  
+# Change axis labels
+p <- p + theme(text=element_text(size=14))
+p <- p +labs(x="",y="Calculated Metabolic Rate [mL O2 * 1/h * 1/g]")
+
+# Output PDF
+pdf("Results-Original-Confidence_Interval_Plot.pdf")
+p
+dev.off()
+
+#########################################################################################
 
 
 
