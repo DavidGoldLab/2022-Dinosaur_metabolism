@@ -151,6 +151,9 @@ colnames(MetRate_phy) <- "MetRate"
 fit <-fastAnc(phydata$phy,MetRate_phy,vars=TRUE,CI=TRUE)
 fit$ace
 
+# Archosaur ancestral state (node 60): 3.8308935
+# Ornithodira ancestral state (node 61): 3.9163752
+
 ramp_rate <- colorRampPalette(c("#02b2ce","#ffd004",  "#e52920"), bias=1.5) 
 
 contmap_MR <- contMap(phydata$phy, MetRate_phy[,1], method = "user", 
@@ -229,10 +232,39 @@ dev.off()
 
 #########################################################################################
 
+# +Ancestral reconstruction (revised data) ----
+	# Change value for Plesiosaur with Rhamphorhynchoid in new trait file (trait.modified.txt)
+
+dat_MR <- read.table("trait.modified.txt",header=TRUE)
+
+MetRate <- dat_MR$Calculated_MRs
+names(MetRate) <- dat_MR$Taxon
+
+
+phydata <- treedata(Consensus_phy_lad, MetRate, sort=TRUE)
+
+MetRate_phy <- phydata$data
+colnames(MetRate_phy) <- "MetRate"
+
+fit <-fastAnc(phydata$phy,MetRate_phy,vars=TRUE,CI=TRUE)
+fit$ace
+
+# Archosaur ancestral state (node 60): 4.0189847
+# Ornithodira ancestral state (node 61): 4.0943289
+
+# Output trait map
+ramp_rate <- colorRampPalette(c("#02b2ce","#ffd004",  "#e52920"), bias=1.5) 
+
+contmap_MR <- contMap(phydata$phy, MetRate_phy[,1], method = "user", 
+                      anc.states = fit$ace)
+contmap_MR$cols[] <- ramp_rate(1001)
 
 
 
-
+pdf("Results-Revised-contmap_phy.pdf")
+plot(contmap_MR, lwd = 2, fsize=0.5, outline=F)+
+nodelabels(col= "red", cex=0.5, frame="none")
+dev.off()
 
 ######
 
